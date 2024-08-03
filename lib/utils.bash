@@ -30,6 +30,10 @@ list_all_versions() {
   list_github_tags
 }
 
+version_greater_equal() {
+    printf '%s\n%s\n' "$2" "$1" | sort --check=quiet --version-sort
+}
+
 download_release() {
   local version filename url os
   version="$1"
@@ -42,7 +46,17 @@ download_release() {
     *) fail "no prebuilt package for os" ;;
   esac
 
-  url="$GH_REPO/releases/download/wasi-sdk-${version}/wasi-sdk-${version}.0-$os.tar.gz"
+  case "$(uname -m)" in
+    x86_64) arch=x86_64 ;;
+    aarch64) arch=arm64 ;;
+    *) fail "no prebuilt package for arch" ;;
+  esac
+
+  if version_greater_equal "${version}" 24; then
+    url="$GH_REPO/releases/download/wasi-sdk-${version}/wasi-sdk-${version}.0-${arch}-${os}.tar.gz"
+  else
+    url="$GH_REPO/releases/download/wasi-sdk-${version}/wasi-sdk-${version}.0-$os.tar.gz"
+  fi
 
   echo "* Downloading wasi-sdk release $version..."
   curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
